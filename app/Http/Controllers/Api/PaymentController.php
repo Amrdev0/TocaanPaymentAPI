@@ -42,11 +42,15 @@ class PaymentController extends Controller
         return PaymentResource::collection($payments);
     }
 
-    public function orderPayments(Order $order): AnonymousResourceCollection
+    public function orderPayments(IndexPaymentRequest $request, Order $order): AnonymousResourceCollection
     {
         $this->authorizeOrder($order);
 
-        return PaymentResource::collection($order->payments()->latest()->get());
+        $payments = $order->payments()
+            ->latest()
+            ->paginate($request->integer('per_page', 15));
+
+        return PaymentResource::collection($payments);
     }
 
     public function process(ProcessPaymentRequest $request, Order $order): JsonResponse

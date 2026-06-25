@@ -95,13 +95,29 @@ class PaymentTest extends TestCase
     {
         $user = User::factory()->create();
         $order = Order::factory()->create(['user_id' => $user->id]);
-        Payment::factory()->count(2)->create(['order_id' => $order->id]);
+        Payment::factory()->count(3)->create(['order_id' => $order->id]);
 
-        $response = $this->withToken($this->tokenFor($user))->getJson("/api/orders/{$order->id}/payments");
+        $response = $this->withToken($this->tokenFor($user))
+            ->getJson("/api/orders/{$order->id}/payments?per_page=2");
 
         $response
             ->assertOk()
-            ->assertJsonCount(2, 'data');
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.per_page', 2)
+            ->assertJsonPath('meta.total', 3);
+    }
+
+    public function test_user_cannot_list_payments_for_another_users_order(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $order = Order::factory()->create(['user_id' => $otherUser->id]);
+        Payment::factory()->create(['order_id' => $order->id]);
+
+        $response = $this->withToken($this->tokenFor($user))
+            ->getJson("/api/orders/{$order->id}/payments");
+
+        $response->assertNotFound();
     }
 
     public function test_user_can_process_payment_for_confirmed_order(): void
